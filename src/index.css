@@ -1,13 +1,41 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Table */
+.fa-edit,
+.fa-trash {
+  cursor: pointer;
+  margin: 0 8px;
+}
+td img {
+  width: 100px;
+  height: 100px;
+  margin: auto;
+  object-fit: scale-down;
+}
+tr:nth-child(even) {
+  background-color: lightgray;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+/* Carousel */
+/* Width of screen: 1170px */
+#slick-slider-wrapper {
+  width: 1170px;
+  height: 420px;
+}
+.slick-slider {
+  width: 1090px;
+  height: 400px;
+  margin: auto;
+}
+/* for some reason the img becomes width: 100% and inline-block. */
+.slick-slide img {
+  object-fit: scale-down;
+}
+
+/* slick arrows */
+.slick-arrow::before {
+  color: black;
+}
+
+/* Other */
+label {
+  cursor: pointer;
 }

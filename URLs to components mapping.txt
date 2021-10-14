@@ -1,0 +1,7 @@
+URLs to Components mappings:
+/ads -> AdsTable, /ads?component=Carousel -> Carousel
+/ads/:id -> existingAdForm
+/ads/:id?component=Deleted -> Div (ad deleted)
+/users -> UsersTable
+/users/:id -> existingUserForm, /loginUserForm -> loginUserForm, /newUserForm -> newUserForm
+/users/:id?component=Deleted -> Div (user deleted)
