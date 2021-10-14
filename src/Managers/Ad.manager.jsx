@@ -382,3 +382,4 @@ export const AdSwitch = () => {
 // * think about merging to one component with 'value' prop that will be a single element or a collection according to whether the use is loggeding.
 // * when presenting the ads, then login and then again getting the ads instead of saving them in memory, think about a way to access them globally (maybe redux?).
 // * when updating an ad and then navigating through the radio buttun to table, and than to the ad, it doesn't update on client.
+// A comment for github
