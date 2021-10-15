@@ -119,21 +119,19 @@ const AdManager = () => {
   // Create
   const handleAdFormOpen = () => {
     setAdFormOpen(true)
-    // setAd(initialAd)
   }
   const handleAdFormClose = () => {
     setAdFormOpen(false)
     if (id)
       if (ads.length) setAd(ads[ads.findIndex(ad => id === ad.id.toString())])
-      else readAd() // Maybe save the previous ad somehow (because it is known that there might be canceling of the dialog).
-
-    function readAd() {
-      dataService(`/ads/${id}`, 'get')
-        .then(({ data }) => {
-          setAd(data)
-        })
-        .catch(error => handleSnackbarOpen(error.response.text, 'error'))
-    }
+      else
+        dataService(`/api/ads/${id}`, 'get')
+          .then(({ data }) => {
+            setAd(data)
+          })
+          .catch(error =>
+            handleSnackbarOpen(error.response.statusText, 'error')
+          )
   }
   // Submit form on create and update.
   const handleSubmit = (action, method) => {
@@ -168,28 +166,27 @@ const AdManager = () => {
         }
       })
       .catch(error => {
-        handleSnackbarOpen(error.response.text, 'error')
+        handleSnackbarOpen(error.response.statusText, 'error')
       })
   }
   //    Read
   // URL changed.
   useEffect(() => {
     const initialAd = initialAdRef.current
-    console.log('in id useEffect')
-    // /ads
+    // /api/ads
     if (!id) {
       // Read ads
-      dataService('/ads', 'get')
+      dataService('/api/ads', 'get')
         .then(({ data }) => {
           setAds(data)
         })
-        .catch(error => handleSnackbarOpen(error.response.text, 'error'))
+        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
       setAd(initialAd) // might navigated from a deleted or existing element.
     }
     // /ad
     // Read ad
     else
-      dataService(`/ads/${id}`, 'get')
+      dataService(`/api/ads/${id}`, 'get')
         .then(({ data }) => {
           setAd(data)
         })
@@ -197,17 +194,20 @@ const AdManager = () => {
   }, [id])
   //    Destroy
   const handleDestroy = indices => {
-    // /ads. indices present.
+    // /api/ads. indices present.
     if (!id) destroyAds()
     // /ad
-    else destroyAd()
+    else {
+      destroyAd()
+      setAd(initialAd)
+    }
 
     function destroyAds() {
       // TODO: might want to save server requests by sending all ids in action or body.
       while (indices.length) {
         const index = indices.pop()
 
-        dataService(`/ads/${ads[index].id}`, 'delete')
+        dataService(`/api/ads/${ads[index].id}`, 'delete')
           .then(() => {
             // TODO: Might want to do them all after while loop.
             setAds(prevAds => {
@@ -216,12 +216,14 @@ const AdManager = () => {
             })
             handleSnackbarOpen('Ad(s) destroyed!', 'success')
           })
-          .catch(error => handleSnackbarOpen(error.response.text, 'error'))
+          .catch(error =>
+            handleSnackbarOpen(error.response.statusText, 'error')
+          )
       }
     }
 
     function destroyAd() {
-      dataService(`/ads/${id}`, 'delete')
+      dataService(`/api/ads/${id}`, 'delete')
         .then(() => {
           // form is directly navigated.
           if (!ads.length) {
@@ -233,7 +235,7 @@ const AdManager = () => {
           } else history.replace('/ads')
           handleSnackbarOpen('Ad destroyed!', 'success')
         })
-        .catch(error => handleSnackbarOpen(error.response.text, 'error'))
+        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
     }
   }
 
@@ -266,7 +268,6 @@ const AdManager = () => {
       ad.description.slice(0, -1) + (+ad.description.slice(-1) + 1)
     setAd({ ...ad, gender, bodyPart, type, title, description })
   }
-
   // upated/deleted from an independant page.
   if (sbAlert.text.includes('delete')) return <div>{sbAlert.text}</div>
   return (
@@ -323,7 +324,7 @@ const AdManager = () => {
         open={isSnackbarOpen}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{vertical: 'bottom',horizontal: 'center'}}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert
           onClose={handleSnackbarClose}

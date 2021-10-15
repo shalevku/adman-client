@@ -50,7 +50,6 @@ const UserManager = () => {
   // Create
   const handleUserFormOpen = () => {
     setUserFormOpen(true)
-    setUser(initialUser)
   }
   const handleUserFormClose = () => {
     setUserFormOpen(false)
@@ -60,11 +59,11 @@ const UserManager = () => {
       else readUser() // Maybe save the previous user somehow (because it is known that there might be canceling of the dialog).
 
     function readUser() {
-      dataService(`/users/${id}`, 'get')
+      dataService(`/api/users/${id}`, 'get')
         .then(({ data }) => {
           setUser(data)
         })
-        .catch(error => handleSnackbarOpen(error.response.text, 'error'))
+        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
     }
   }
   // Submit form on create and update.
@@ -81,7 +80,7 @@ const UserManager = () => {
         }
         console.log(`${user.name} was ${pastTenses[method]}!`)
 
-        // action is /users for sure.
+        // action is /api/users for sure.
         if (method === 'post') {
           setUserFormOpen(false)
           // in UsersTable/Carousel.
@@ -101,35 +100,35 @@ const UserManager = () => {
           } else handleSnackbarOpen(`User ${id} updated!`, 'success')
         }
       })
-      .catch(error => handleSnackbarOpen(error.response.text, 'error'))
+      .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
   }
   //    Read
   // URL changed.
   useEffect(() => {
     const initialUser = initialUserRef.current
 
-    // /users
+    // /api/users
     if (!id) {
       // Read users
-      dataService('/users', 'get')
+      dataService('/api/users', 'get')
         .then(({ data }) => {
           setUsers(data)
         })
-        .catch(error => handleSnackbarOpen(error.response.text, 'error'))
+        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
       setUser(initialUser) // navigated from a deleted element.
     }
     // /user/:id
     // Read users.
     else
-      dataService(`/users/${id}`, 'get')
+      dataService(`/api/users/${id}`, 'get')
         .then(({ data }) => {
           setUser(data)
         })
-        .catch(error => handleSnackbarOpen(error.response.text, 'error'))
+        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
   }, [id])
   //    Destroy
   const handleDestroy = selectedIndices => {
-    // /users. selectedIndices present.
+    // /api/users. selectedIndices present.
     if (!id) {
       destroyUsers()
       // logout the user if he deleted himself
@@ -146,6 +145,7 @@ const UserManager = () => {
     // /user/:id
     else {
       destroyUser()
+      setUser(initialUser)
       if (id === auth.authUser.id) auth.logout()
     }
 
@@ -153,7 +153,7 @@ const UserManager = () => {
       while (selectedIndices.length) {
         const index = selectedIndices.pop()
 
-        dataService(`/users/${users[index].id}`, 'delete')
+        dataService(`/api/users/${users[index].id}`, 'delete')
           .then(() => {
             setUsers(prevUsers => {
               prevUsers.splice(index, 1)
@@ -161,12 +161,12 @@ const UserManager = () => {
             })
             handleSnackbarOpen('User(s) destroyed!', 'success')
           })
-          .catch(error => handleSnackbarOpen(error.response.text, 'error'))
+          .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
       }
     }
 
     function destroyUser() {
-      dataService(`/users/${id}`, 'delete')
+      dataService(`/api/users/${id}`, 'delete')
         .then(() => {
           // form is directly navigated.
           if (!users.length) {
@@ -179,7 +179,7 @@ const UserManager = () => {
 
           handleSnackbarOpen('User destroyed!', 'success')
         })
-        .catch(error => handleSnackbarOpen(error.response.text, 'error'))
+        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
     }
   }
 

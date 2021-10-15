@@ -39,13 +39,13 @@ const UserSession = props => {
       .then(({ data }) => {
         // Alert that the action was performed successfully.
         const pastTenses = {
-          post: action === '/users' ? 'Created' : 'Logged in',
+          post: action === '/api/users' ? 'Created' : 'Logged in',
           put: 'Updated',
           delete: 'Deleted'
         }
         console.log(`${user.name} was ${pastTenses[method]}!`)
         switch (action) {
-          case '/users':
+          case '/api/users':
             handleSnackbarOpen(
               `User ${user.name} created! Redirecting to login page in 2 seconds...`,
               'success'
@@ -54,7 +54,7 @@ const UserSession = props => {
               history.replace(`/login`)
             }, 2000)
             break
-          case '/userSession':
+          case '/api/userSession':
             auth.login(data)
             break
           default:
@@ -92,7 +92,7 @@ const UserSession = props => {
   return (
     <>
       <Switch>
-        <Route exact path={'/login'}>
+        <Route exact path="/login">
           <UserForm
             name="login"
             user={user}
@@ -100,7 +100,7 @@ const UserSession = props => {
             onChange={handleChange}
           />
         </Route>
-        <Route exact path={'/createAccount'}>
+        <Route exact path="/createAccount">
           <UserForm
             name="new"
             user={user}

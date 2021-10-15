@@ -41,7 +41,7 @@ const App = () => {
   }
 
   const logout = async () => {
-    await dataService('/userSession', 'delete')
+    await dataService('/api/userSession', 'delete')
     setAuthUser(null)
   }
 

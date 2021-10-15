@@ -101,7 +101,7 @@ const AdForm = props => {
   // Fields (properties) of the form that will be rendered.
   switch (props.name) {
     case 'existing':
-      ;[action, method] = [`/ads/${params.id}`, 'put']
+      ;[action, method] = [`/api/ads/${params.id}`, 'put']
       Object.assign(adMask, {
         id: true,
         gender: true,
@@ -116,7 +116,7 @@ const AdForm = props => {
       })
       break
     case 'new':
-      ;[action, method] = [`/ads`, 'post']
+      ;[action, method] = [`/api/ads`, 'post']
       Object.assign(adMask, {
         gender: true,
         bodyPart: true,

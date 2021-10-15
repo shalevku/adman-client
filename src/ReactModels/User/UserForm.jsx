@@ -43,7 +43,7 @@ const UserForm = props => {
   // Fields (properties) of the form that will be rendered.
   switch (props.name) {
     case 'existing':
-      ;[action, method] = [`/users/${params.id}`, 'put']
+      ;[action, method] = [`/api/users/${params.id}`, 'put']
       Object.assign(userMask, {
         id: true,
         email: true,
@@ -54,7 +54,7 @@ const UserForm = props => {
       })
       break
     case 'new':
-      ;[action, method] = [`/users`, 'post']
+      ;[action, method] = [`/api/users`, 'post']
       Object.assign(userMask, {
         email: true,
         password: true,
@@ -63,7 +63,7 @@ const UserForm = props => {
       })
       break
     case 'login':
-      ;[action, method] = [`/userSession`, 'post']
+      ;[action, method] = [`/api/userSession`, 'post']
       Object.assign(userMask, {
         email: true,
         password: true,
