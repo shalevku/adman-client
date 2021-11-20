@@ -130,7 +130,7 @@ const AdManager = () => {
             setAd(data)
           })
           .catch(error =>
-            handleSnackbarOpen(error.response.statusText, 'error')
+            handleSnackbarOpen(error.response?.statusText || error.message, 'error')
           )
   }
   // Submit form on create and update.
@@ -166,7 +166,7 @@ const AdManager = () => {
         }
       })
       .catch(error => {
-        handleSnackbarOpen(error.response.statusText, 'error')
+        handleSnackbarOpen(error.response?.statusText || error.message, 'error')
       })
   }
   //    Read
@@ -180,7 +180,7 @@ const AdManager = () => {
         .then(({ data }) => {
           setAds(data)
         })
-        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
+        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
       setAd(initialAd) // might navigated from a deleted or existing element.
     }
     // /ad
@@ -190,7 +190,7 @@ const AdManager = () => {
         .then(({ data }) => {
           setAd(data)
         })
-        .catch(error => handleSnackbarOpen(error.response.text, 'error'))
+        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
   }, [id])
   //    Destroy
   const handleDestroy = indices => {
@@ -217,7 +217,7 @@ const AdManager = () => {
             handleSnackbarOpen('Ad(s) destroyed!', 'success')
           })
           .catch(error =>
-            handleSnackbarOpen(error.response.statusText, 'error')
+            handleSnackbarOpen(error.response?.statusText || error.message, 'error')
           )
       }
     }
@@ -235,7 +235,7 @@ const AdManager = () => {
           } else history.replace('/ads')
           handleSnackbarOpen('Ad destroyed!', 'success')
         })
-        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
+        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
     }
   }
 

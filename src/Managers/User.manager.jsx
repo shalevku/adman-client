@@ -63,7 +63,7 @@ const UserManager = () => {
         .then(({ data }) => {
           setUser(data)
         })
-        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
+        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
     }
   }
   // Submit form on create and update.
@@ -100,7 +100,7 @@ const UserManager = () => {
           } else handleSnackbarOpen(`User ${id} updated!`, 'success')
         }
       })
-      .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
+      .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
   }
   //    Read
   // URL changed.
@@ -114,7 +114,7 @@ const UserManager = () => {
         .then(({ data }) => {
           setUsers(data)
         })
-        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
+        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
       setUser(initialUser) // navigated from a deleted element.
     }
     // /user/:id
@@ -124,7 +124,7 @@ const UserManager = () => {
         .then(({ data }) => {
           setUser(data)
         })
-        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
+        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
   }, [id])
   //    Destroy
   const handleDestroy = selectedIndices => {
@@ -161,7 +161,7 @@ const UserManager = () => {
             })
             handleSnackbarOpen('User(s) destroyed!', 'success')
           })
-          .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
+          .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
       }
     }
 
@@ -179,7 +179,7 @@ const UserManager = () => {
 
           handleSnackbarOpen('User destroyed!', 'success')
         })
-        .catch(error => handleSnackbarOpen(error.response.statusText, 'error'))
+        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
     }
   }
 

@@ -2,7 +2,7 @@
 import axios from 'axios'
 
 // create and update (multipart/form-data)
-const service = (action, method, data = {}) => {
+const service = (path, method, data = {}) => {
   var formData = new FormData()
   if (data !== {}) {
     for (let key in data) {
@@ -10,7 +10,7 @@ const service = (action, method, data = {}) => {
     }
   }
   return axios({
-    url: action,
+    url: path,
     method,
     headers: { 'content-type': 'multipart/form-data' },
     data: formData
