@@ -15,10 +15,10 @@ import {
   Typography,
   Link,
   Button,
-  IconButton
+  // IconButton
 } from '@mui/material'
-import MenuIcon from '@mui/icons-material/Menu'
-import dataService from './services/Data.service'
+// import MenuIcon from '@mui/icons-material/Menu'
+import axios from 'axios'
 import UserSessionManager, { UserAuthSwitch } from './Managers/UserSession'
 import AdManager, { AdSwitch } from './Managers/Ad.manager'
 import UserManager from './Managers/User.manager'
@@ -28,10 +28,10 @@ const AD_MANAGER_URLs = ['/ads/:id', '/ads', '/adsCarousel']
 const USER_MANAGER_URLs = ['/users/:id', '/users']
 
 const App = () => {
+  //    React router hooks and authentication context value
   const history = useHistory()
   const location = useLocation()
   console.log(`App at ${location.pathname}.`)
-
   const [authUser, setAuthUser] = useState(null)
 
   const login = authUser => {
@@ -41,7 +41,7 @@ const App = () => {
   }
 
   const logout = async () => {
-    await dataService('/api/userSession', 'delete')
+    await axios.delete('/api/userSession')
     setAuthUser(null)
   }
 
@@ -54,7 +54,7 @@ const App = () => {
           <AppBar position="static" color="inherit" sx={{ mb: '3px' }}>
             <Toolbar>
               {/* hamburger menu */}
-              <IconButton
+              {/* <IconButton
                 size="large"
                 edge="start"
                 color="inherit"
@@ -62,7 +62,7 @@ const App = () => {
                 sx={{ mr: 2 }}
               >
                 <MenuIcon />
-              </IconButton>
+              </IconButton> */}
               {/* Homepage link */}
               <Typography
                 variant="h1"
@@ -117,13 +117,12 @@ const App = () => {
               <Route path={AD_MANAGER_URLs}>
                 <AdSwitch />
               </Route>
-
               {location.pathname !== '/users' && (
                 <Link component={RouterLink} to="/users">
                   Users
                 </Link>
               )}
-
+              &nbsp;&nbsp;
               {/* Logout and login controls. */}
               {auth.authUser ? (
                 <Button

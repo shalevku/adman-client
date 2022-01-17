@@ -6,9 +6,17 @@ import {
   useLocation,
   useParams
 } from 'react-router-dom'
-import { Button, Dialog, DialogTitle, Snackbar, Alert } from '@mui/material'
+import {
+  Button,
+  Dialog,
+  DialogTitle,
+  Snackbar,
+  Alert,
+  Container,
+  CircularProgress
+} from '@mui/material'
 import { authContext } from '../App'
-import dataService from '../services/Data.service'
+import axios from 'axios'
 import UserForm from '../ReactModels/User/UserForm'
 import UsersTable from '../ReactModels/User/UsersTable'
 
@@ -18,12 +26,11 @@ import UsersTable from '../ReactModels/User/UsersTable'
  * @returns \<switch> of collection and element components.
  */
 const UserManager = () => {
-  //    React router hooks
+  //    React router hooks and authentication context value
   const history = useHistory()
   const location = useLocation()
   console.log(`UserManager at ${location.pathname}.`)
   const { id } = useParams()
-  //    Authentication context value
   const auth = useContext(authContext)
 
   //    States
@@ -45,6 +52,7 @@ const UserManager = () => {
   // Feedback related
   const [isSnackbarOpen, setIsSnackbarOpen] = useState(false)
   const [sbAlert, setSbAlert] = useState({ text: '', severity: 'error' })
+  const [waiting, setWaiting] = useState(false) // for ads or ad
 
   //    Create and update
   // Create
@@ -59,18 +67,27 @@ const UserManager = () => {
       else readUser() // Maybe save the previous user somehow (because it is known that there might be canceling of the dialog).
 
     function readUser() {
-      dataService(`/api/users/${id}`, 'get')
+      axios
+        .get(`/api/users/${id}`)
         .then(({ data }) => {
           setUser(data)
         })
-        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
+        .catch(error =>
+          handleSnackbarOpen(
+            error.response?.statusText || error.message,
+            'error'
+          )
+        )
     }
   }
   // Submit form on create and update.
-  const handleSubmit = (action, method) => {
-    const userToSend = { ...user }
-
-    dataService(action, method, userToSend)
+  const handleSubmit = (path, method) => {
+    axios({
+      method,
+      url: path,
+      headers: { 'content-type': 'application/json' },
+      data: user
+    })
       .then(({ data }) => {
         // Alert that the action was performed successfully.
         const pastTenses = {
@@ -100,47 +117,62 @@ const UserManager = () => {
           } else handleSnackbarOpen(`User ${id} updated!`, 'success')
         }
       })
-      .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
+      .catch(error =>
+        handleSnackbarOpen(error.response?.statusText || error.message, 'error')
+      )
   }
   //    Read
   // URL changed.
   useEffect(() => {
     const initialUser = initialUserRef.current
-
-    // /api/users
+    setWaiting(true)
+    // /users
     if (!id) {
       // Read users
-      dataService('/api/users', 'get')
+      axios
+        .get('/api/users')
         .then(({ data }) => {
           setUsers(data)
+          setWaiting(false)
         })
-        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
+        .catch(error =>
+          handleSnackbarOpen(
+            error.response?.statusText || error.message,
+            'error'
+          )
+        )
       setUser(initialUser) // navigated from a deleted element.
     }
     // /user/:id
     // Read users.
     else
-      dataService(`/api/users/${id}`, 'get')
+      axios
+        .get(`/api/users/${id}`)
         .then(({ data }) => {
           setUser(data)
+          setWaiting(false)
         })
-        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
+        .catch(error =>
+          handleSnackbarOpen(
+            error.response?.statusText || error.message,
+            'error'
+          )
+        )
   }, [id])
   //    Destroy
   const handleDestroy = selectedIndices => {
-    // /api/users. selectedIndices present.
+    // /users. selectedIndices present.
     if (!id) {
       destroyUsers()
       // logout the user if he deleted himself
       const authUserIndex = users.findIndex(
         user => auth.authUser.id === user.id
       )
-      if (selectedIndices.includes(authUserIndex))
-      console.log('in if');  
+      if (selectedIndices.includes(authUserIndex)) console.log('in if')
       setTimeout(() => {
-          console.log('about to logout');
-          auth.logout()
-        }, 3000)
+        console.log('about to logout')
+        auth.logout()
+      }, 3000)
     }
     // /user/:id
     else {
@@ -153,7 +185,8 @@ const UserManager = () => {
       while (selectedIndices.length) {
         const index = selectedIndices.pop()
 
-        dataService(`/api/users/${users[index].id}`, 'delete')
+        axios
+          .delete(`/api/users/${users[index].id}`)
           .then(() => {
             setUsers(prevUsers => {
               prevUsers.splice(index, 1)
@@ -161,12 +194,18 @@ const UserManager = () => {
             })
             handleSnackbarOpen('User(s) destroyed!', 'success')
           })
-          .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
+          .catch(error =>
+            handleSnackbarOpen(
+              error.response?.statusText || error.message,
+              'error'
+            )
+          )
       }
     }
 
     function destroyUser() {
-      dataService(`/api/users/${id}`, 'delete')
+      axios
+        .delete(`/api/users/${id}`)
         .then(() => {
           // form is directly navigated.
           if (!users.length) {
@@ -179,13 +218,18 @@ const UserManager = () => {
 
           handleSnackbarOpen('User destroyed!', 'success')
         })
-        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
+        .catch(error =>
+          handleSnackbarOpen(
+            error.response?.statusText || error.message,
+            'error'
+          )
+        )
     }
   }
 
   //    Standard form change handler
   const handleChange = (name, value) => {
-    setUser(user => ({ ...user, [name]: value }))
+    setUser(prevUser => ({ ...prevUser, [name]: value }))
   }
 
   //    Feedback
@@ -207,20 +251,32 @@ const UserManager = () => {
     <>
       <Switch>
         <Route exact path="/users">
-          <UsersTable
-            initialElement={initialUser}
-            rows={users}
-            onDestroy={handleDestroy}
-          />
+          {waiting ? (
+            <Container sx={{ width: '150px', paddingTop: '100px' }}>
+              <CircularProgress size={100} />
+            </Container>
+          ) : (
+            <UsersTable
+              initialElement={initialUser}
+              rows={users}
+              onDestroy={handleDestroy}
+            />
+          )}
         </Route>
         <Route path="/users/:id">
-          <UserForm
-            name="existing"
-            user={user}
-            onSubmit={handleSubmit}
-            onChange={handleChange}
-            onDestroy={handleDestroy}
-          />
+          {waiting ? (
+            <Container sx={{ width: '150px', paddingTop: '100px' }}>
+              <CircularProgress size={100} />
+            </Container>
+          ) : (
+            <UserForm
+              name="existing"
+              user={user}
+              onSubmit={handleSubmit}
+              onChange={handleChange}
+              onDestroy={handleDestroy}
+            />
+          )}
         </Route>
       </Switch>
       {/* Create button */}
@@ -251,7 +307,7 @@ const UserManager = () => {
         open={isSnackbarOpen}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{vertical: 'bottom',horizontal: 'center'}}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert
           onClose={handleSnackbarClose}

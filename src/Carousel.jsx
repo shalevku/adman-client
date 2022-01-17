@@ -25,10 +25,10 @@ const Carousel = props => {
       <Slider {...settings}>
         {props.value.map(
           element =>
-            element.photoName && (
+            element.photo && (
               <img
                 key={element.id}
-                src={`/photos/${element.UserId}/${element.photoName}`}
+                src={element.photo}
                 alt={element.title}
                 width="1090px"
                 height="400px"

@@ -8,7 +8,7 @@ import {
   Alert
 } from '@mui/material'
 import { authContext } from '../App'
-import dataService from '../services/Data.service'
+import axios from 'axios'
 import UserForm from '../ReactModels/User/UserForm'
 
 const UserSession = props => {
@@ -30,29 +30,30 @@ const UserSession = props => {
     name: 'Shalev Kubi'
   }
   const [user, setUser] = useState(initialUser) // just for same user between createAccount and login.
+  const [waitingSubmit, setWaitingSubmit] = useState(false)
 
   //    Create and login
-  const handleSubmitUser = (action, method) => {
-    const userToSend = { ...user } // TODO: maybe delete and send directly? (like in components).
-
-    dataService(action, method, userToSend)
+  const handleSubmitUser = (path, method) => {
+    setWaitingSubmit(true)
+    axios({
+      method,
+      url: path,
+      headers: { 'content-type': 'application/json' },
+      data: user
+    })
       .then(({ data }) => {
-        // Alert that the action was performed successfully.
+        setWaitingSubmit(false)
+        // Alert that the path was performed successfully.
         const pastTenses = {
-          post: action === '/api/users' ? 'Created' : 'Logged in',
+          post: path === '/api/users' ? 'Created' : 'Logged in',
           put: 'Updated',
           delete: 'Deleted'
         }
         console.log(`${user.name} was ${pastTenses[method]}!`)
-        switch (action) {
+        switch (path) {
           case '/api/users':
-            handleSnackbarOpen(
-              `User ${user.name} created! Redirecting to login page in 2 seconds...`,
-              'success'
-            )
-            setTimeout(() => {
-              history.replace(`/login`)
-            }, 2000)
+            history.push('/login')
+            handleSnackbarOpen(`User ${user.name} created!`, 'success')
             break
           case '/api/userSession':
             auth.login(data)
@@ -98,6 +99,7 @@ const UserSession = props => {
             user={user}
             onSubmit={handleSubmitUser}
             onChange={handleChange}
+            waitingSubmit={waitingSubmit}
           />
         </Route>
         <Route exact path="/createAccount">
@@ -106,6 +108,7 @@ const UserSession = props => {
             user={user}
             onSubmit={handleSubmitUser}
             onChange={handleChange}
+            waitingSubmit={waitingSubmit}
           />
         </Route>
       </Switch>
@@ -131,6 +134,7 @@ const UserSession = props => {
 export default UserSession
 
 export const UserAuthSwitch = () => {
+  //    React router hooks
   const history = useHistory()
   const location = useLocation()
 

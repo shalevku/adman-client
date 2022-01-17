@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { alpha } from '@mui/material/styles'
@@ -15,14 +15,19 @@ import {
   TableRow,
   TableSortLabel
 } from '@mui/material'
-import Typography from '@mui/material/Typography'
-import Checkbox from '@mui/material/Checkbox'
-import IconButton from '@mui/material/IconButton'
-import Tooltip from '@mui/material/Tooltip'
-import { FormControlLabel, Switch } from '@mui/material'
+import {
+  Switch,
+  Typography,
+  CircularProgress,
+  Checkbox,
+  Tooltip,
+  FormControlLabel,
+  IconButton
+} from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import { visuallyHidden } from '@mui/utils'
+import { authContext } from '../../App'
 
 /**
  *
@@ -31,6 +36,7 @@ import { visuallyHidden } from '@mui/utils'
  * @returns \<div> (probably) as MUI TableHead.
  */
 const EnhancedTableHead = props => {
+  const { authUser } = useContext(authContext)
   const {
     onSelectAllClick,
     order,
@@ -54,17 +60,19 @@ const EnhancedTableHead = props => {
   return (
     <TableHead>
       <TableRow>
-        <TableCell padding="checkbox">
-          <Checkbox
-            color="primary"
-            indeterminate={numSelected > 0 && numSelected < rowCount}
-            checked={rowCount > 0 && numSelected === rowCount}
-            onChange={onSelectAllClick}
-            inputProps={{
-              'aria-label': 'select all ads'
-            }}
-          />
-        </TableCell>
+        {authUser && (
+          <TableCell padding="checkbox">
+            <Checkbox
+              color="primary"
+              indeterminate={numSelected > 0 && numSelected < rowCount}
+              checked={rowCount > 0 && numSelected === rowCount}
+              onChange={onSelectAllClick}
+              inputProps={{
+                'aria-label': 'select all ads'
+              }}
+            />
+          </TableCell>
+        )}
         {props.headers.map(header => (
           <TableCell
             key={header.id}
@@ -80,7 +88,7 @@ const EnhancedTableHead = props => {
               >
                 <b>
                   {_.startCase(
-                    header.label === 'photoName' ? 'photo' : header.label
+                    header.label === 'photo' ? 'photo' : header.label
                   )}
                 </b>
                 {orderBy === header.id ? (
@@ -117,10 +125,12 @@ EnhancedTableHead.propTypes = {
 
 /**
  *  Table with paging, sorting and filtering.
- * @param {*} props initialElement, rows, onDestroy.
+ * @param {*} props initialElement, rows, onDestroy, onPhotoDestroy, waitingDestroy.
  * @returns \<div> (probably) as MUI TableContainer with "edit item" and "destroy" ad actions.
  */
 const EnhancedTable = props => {
+  const { authUser } = useContext(authContext)
+  //    React router hooks
   const location = useLocation()
   console.log(`AdsTable at ${location.pathname}.`)
 
@@ -162,6 +172,17 @@ const EnhancedTable = props => {
     setSelectedIndices(newSelectedIndices)
   }
   const handleDestroy = event => {
+    // Destroy each ad's photo, if exist.
+    selectedIndices.forEach(index => {
+      // TODO: might want to send in one request.
+      const currentAd = props.rows[index]
+      // if photo exist, destroy it.
+      if (currentAd.photo !== '/default.png') {
+        const key = new URL(currentAd.photo).pathname
+        props.onPhotoDestroy(key)
+      }
+    })
+    // Destroy the ads themselves.
     props.onDestroy(selectedIndices)
   }
   const handlePageChange = (event, newPage) => {
@@ -219,20 +240,19 @@ const EnhancedTable = props => {
 
   useEffect(() => {
     // TODO: might want to act on filtered rows when adding chars and on props.rows when deleting them (or use a memento pattern).
-    const newFilteredRows = props.rows.filter(row =>
-      // TODO: try without return.
-      Object.keys(rowFilter).every(rfkey => {
+    const newFilteredRows = props.rows.filter(row => {
+      return Object.keys(rowFilter).every(rfkey => {
         let value = row[rfkey]
         if (typeof value === 'number') value = value.toString()
         else if (typeof value === 'boolean') value = value ? 'Yes' : 'No'
         return value.includes(rowFilter[rfkey])
       })
-    )
+    })
     setFilteredRows(newFilteredRows)
   }, [props, rowFilter])
 
   return (
-    <Box sx={{ width: '100%' }}>
+    <Box>
       <Paper sx={{ width: '100%', mb: 2 }}>
         <TableContainer sx={{ height: '350px', overflowY: 'scroll' }}>
           <Table
@@ -273,15 +293,17 @@ const EnhancedTable = props => {
                       tabIndex={-1}
                       selected={isItemSelected}
                     >
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          color="primary"
-                          checked={isItemSelected}
-                          inputProps={{
-                            'aria-labelledby': checkboxLabelId
-                          }}
-                        />
-                      </TableCell>
+                      {authUser && (
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            color="primary"
+                            checked={isItemSelected}
+                            inputProps={{
+                              'aria-labelledby': checkboxLabelId
+                            }}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell padding="none">
                         <Link
                           underline="hover"
@@ -300,10 +322,10 @@ const EnhancedTable = props => {
 
                         if (typeof row[key] === 'boolean')
                           cellValue = row[key] ? 'Yes' : 'No'
-                        else if (key === 'photoName')
-                          cellValue = row.photoName && (
+                        else if (key === 'photo')
+                          cellValue = row.photo && (
                             <img
-                              src={`/photos/${row.UserId}/${row.photoName}`}
+                              src={row.photo}
                               alt={`${row.title}`}
                               width="100px"
                               height="100px"
@@ -365,6 +387,7 @@ const EnhancedTable = props => {
           selectedIndices={selectedIndices}
           onDestroy={handleDestroy}
           onFilterOn={handleFilterOn}
+          waitingDestroy={props.waitingDestroy}
         />
       </Paper>
     </Box>
@@ -414,9 +437,15 @@ function EnhancedTableToolbar(props) {
 
       {numSelected > 0 ? (
         <Tooltip title="Delete">
-          <IconButton onClick={props.onDestroy}>
-            <DeleteIcon />
-          </IconButton>
+          {props.waitingDestroy ? (
+            <Box>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <IconButton onClick={props.onDestroy}>
+              <DeleteIcon />
+            </IconButton>
+          )}
         </Tooltip>
       ) : (
         <Tooltip title="Filter list">

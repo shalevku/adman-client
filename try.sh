@@ -11,14 +11,10 @@ fi
 
 if [ $1 = $try ]
 then
-  mv src "src original"
-  mv "src try" src
-  echo src is now try
+  mv src "src original" && mv "src try" src && echo src is now try
 elif [ $1 = $original ]
 then
-  mv src "src try"
-  mv "src original" src
-  echo src is now original 
+  mv src "src try" && mv "src original" src && echo src is now original 
 else
   echo The aciton needs to be one of two: try or original only.
 fi

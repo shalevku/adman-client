@@ -89,7 +89,7 @@ const EnhancedTableHead = props => {
               >
                 <b>
                   {_.startCase(
-                    header.label === 'photoName' ? 'photo' : header.label
+                    header.label === 'photo' ? 'photo' : header.label
                   )}
                 </b>
                 {orderBy === header.id ? (
@@ -130,6 +130,7 @@ EnhancedTableHead.propTypes = {
  * @returns \<div> (probably) as MUI TableContainer with "edit item" and "destroy" user actions.
  */
 const EnhancedTable = props => {
+  //    React router hooks
   const location = useLocation()
   console.log(`UsersTable at ${location.pathname}.`)
 
@@ -319,10 +320,10 @@ const EnhancedTable = props => {
 
                           if (typeof row[key] === 'boolean')
                             cellValue = row[key] ? 'Yes' : 'No'
-                          else if (key === 'photoName')
-                            cellValue = row.photoName && (
+                          else if (key === 'photo')
+                            cellValue = row.photo && (
                               <img
-                                src={`/photos/${row.UserId}/${row.photoName}`}
+                                src={row.photo}
                                 alt={`${row.title}`}
                                 width="100px"
                                 height="100px"

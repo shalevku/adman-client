@@ -14,9 +14,11 @@ import {
   Dialog,
   DialogTitle,
   Snackbar,
-  Alert
+  Alert,
+  Container,
+  CircularProgress
 } from '@mui/material'
-import dataService from '../services/Data.service'
+import axios from 'axios'
 import { authContext } from '../App'
 import AdForm from '../ReactModels/Ad/AdForm'
 import AdsTable from '../ReactModels/Ad/AdsTable'
@@ -53,6 +55,7 @@ const TYPES = [
   'T-shirt',
   'Flip-flops',
   'Shorts',
+  'Pants',
   'Skirt',
   'Jeans',
   'Shoes',
@@ -82,12 +85,11 @@ const TYPES = [
  * @returns \<switch> of collection and element components.
  */
 const AdManager = () => {
-  //    React router hooks
+  //    React router hooks and authentication context value
   const history = useHistory()
   const location = useLocation()
   console.log(`AdManager at ${location.pathname}.`)
   const { id } = useParams()
-  //    Authentication context value
   const { authUser } = useContext(authContext)
 
   //    States
@@ -98,13 +100,13 @@ const AdManager = () => {
   const isEmpty = false // debug.
   const initialAd = {
     id: '',
+    photo: '/default.png',
     gender: isEmpty ? '' : 'Male',
     bodyPart: isEmpty ? '' : 'Torso and Legs',
     type: isEmpty ? '' : 'Sweater',
     title: isEmpty ? '' : 'asdf1',
     description: isEmpty ? '' : 'asdf desc1',
     isGiven: false,
-    photoName: '',
     UserId: ''
   }
   const [ad, setAd] = useState(initialAd)
@@ -114,29 +116,54 @@ const AdManager = () => {
   // Feedback related
   const [isSnackbarOpen, setIsSnackbarOpen] = useState(false)
   const [sbAlert, setSbAlert] = useState({ text: '', severity: 'error' }) // sb - snackbar
+  // Progress circle.
+  const [waiting, setWaiting] = useState(false) // for ads or ad
+  const [waitingPhoto, setWaitingPhoto] = useState(false)
+  const [waitingPhotoDestroy, setWaitingPhotoDestroy] = useState(false)
+  const [waitingSubmit, setWaitingSubmit] = useState(false)
+  const [waitingDestroy, setWaitingDestroy] = useState(false)
 
   //    Create and update
-  // Create
+  // Create - Dialog related and then submit
   const handleAdFormOpen = () => {
     setAdFormOpen(true)
   }
   const handleAdFormClose = () => {
     setAdFormOpen(false)
+    console.log('in handleAdFormClose');
+    if (ad.photo !== '/default.png') {
+      const key = new URL(ad.photo).pathname
+      handlePhotoDestroy(key)
+    }
+    // Changing ad back to what it was (TODO: might save it before overwriting it with new ad).
     if (id)
-      if (ads.length) setAd(ads[ads.findIndex(ad => id === ad.id.toString())])
+      if (ads.length)
+        // TODO: might want to use only get like bezcoder did (since it's supposed to pass on the retrieval).
+        // If ads in memory than we search it.
+        setAd(ads[ads.findIndex(ad => id === ad.id.toString())])
+      // We get the ad from the server.
       else
-        dataService(`/api/ads/${id}`, 'get')
+        axios
+          .get(`/api/ads/${id}`)
           .then(({ data }) => {
             setAd(data)
           })
           .catch(error =>
-            handleSnackbarOpen(error.response?.statusText || error.message, 'error')
+            handleSnackbarOpen(
+              error.response?.statusText || error.message,
+              'error'
+            )
           )
   }
   // Submit form on create and update.
-  const handleSubmit = (action, method) => {
-    const adToSend = { ...ad } // TODO: maybe delete and send directly? (like in components).
-    dataService(action, method, adToSend)
+  const handleSubmit = (path, method) => {
+    setWaitingSubmit(true)
+    axios({
+      method,
+      url: path,
+      headers: { 'content-type': 'application/json' },
+      data: ad
+    })
       .then(({ data }) => {
         // Alert that the action was performed successfully.
         const pastTenses = {
@@ -153,50 +180,61 @@ const AdManager = () => {
           handleSnackbarOpen(`Ad ${ad.title} created!`, 'success')
         } else if (method === 'put') {
           // id present anyways.
+          handleSnackbarOpen(`Ad ${id} updated!`, 'success')
           // ads in memory.
-          if (ads.length !== 0) {
-            handleSnackbarOpen(
-              `Ad ${id} updated! Redirecting in 6 seconds to table...`,
-              'success'
-            )
-            setTimeout(() => {
-              history.push('/ads')
-            }, 6000)
-          } else handleSnackbarOpen(`Ad ${id} updated!`, 'success')
+          if (ads.length !== 0) history.push('/ads')
         }
+        setWaitingSubmit(false)
       })
       .catch(error => {
         handleSnackbarOpen(error.response?.statusText || error.message, 'error')
       })
+      .finally(() => setAd(initialAd))
   }
   //    Read
   // URL changed.
   useEffect(() => {
     const initialAd = initialAdRef.current
-    // /api/ads
+    setWaiting(true)
+    // /ads
     if (!id) {
       // Read ads
-      dataService('/api/ads', 'get')
+      axios
+        .get('/api/ads')
         .then(({ data }) => {
           setAds(data)
+          setWaiting(false)
         })
-        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
+        .catch(error =>
+          handleSnackbarOpen(
+            error.response?.statusText || error.message,
+            'error'
+          )
+        )
       setAd(initialAd) // might navigated from a deleted or existing element.
     }
     // /ad
     // Read ad
     else
-      dataService(`/api/ads/${id}`, 'get')
+      axios
+        .get(`/api/ads/${id}`)
         .then(({ data }) => {
           setAd(data)
+          setWaiting(false)
         })
-        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
+        .catch(error =>
+          handleSnackbarOpen(
+            error.response?.statusText || error.message,
+            'error'
+          )
+        )
   }, [id])
   //    Destroy
   const handleDestroy = indices => {
-    // /api/ads. indices present.
+    setWaitingDestroy(true)
+    // /ads. indices present.
     if (!id) destroyAds()
-    // /ad
+    // /ads/:id
     else {
       destroyAd()
       setAd(initialAd)
@@ -204,45 +242,82 @@ const AdManager = () => {
 
     function destroyAds() {
       // TODO: might want to save server requests by sending all ids in action or body.
-      while (indices.length) {
-        const index = indices.pop()
-
-        dataService(`/api/ads/${ads[index].id}`, 'delete')
-          .then(() => {
-            // TODO: Might want to do them all after while loop.
-            setAds(prevAds => {
-              prevAds.splice(index, 1)
-              return prevAds.slice()
-            })
-            handleSnackbarOpen('Ad(s) destroyed!', 'success')
+      Promise.all(
+        indices.map(index => axios.delete(`/api/ads/${ads[index].id}`))
+      )
+        .then(() => {
+          // Deleting selected ads from ads.
+          setAds(prevAds => {
+            indices.sort() // Must sort because we're using pop.
+            while (indices.length) {
+              prevAds.splice(indices.pop(), 1)
+            }
+            return prevAds.slice()
           })
-          .catch(error =>
-            handleSnackbarOpen(error.response?.statusText || error.message, 'error')
+          handleSnackbarOpen('Ad(s) destroyed!', 'success')
+          setWaitingDestroy(false)
+        })
+        .catch(error =>
+          handleSnackbarOpen(
+            error.response?.statusText || error.message,
+            'error'
           )
-      }
+        )
     }
 
     function destroyAd() {
-      dataService(`/api/ads/${id}`, 'delete')
+      axios
+        .delete(`/api/ads/${id}`)
         .then(() => {
-          // form is directly navigated.
-          if (!ads.length) {
-            setAd(initialAd)
-            handleSnackbarOpen({
-              text: `Ad ${id} deleted!`,
-              severity: 'success'
-            })
-          } else history.replace('/ads')
+          setWaitingDestroy(false)
+          // ads in memory
+          if (ads.length) history.replace('/ads')
           handleSnackbarOpen('Ad destroyed!', 'success')
         })
-        .catch(error => handleSnackbarOpen(error.response?.statusText || error.message, 'error'))
+        .catch(error =>
+          handleSnackbarOpen(
+            error.response?.statusText || error.message,
+            'error'
+          )
+        )
     }
   }
 
   //    Standard form change handler
   const handleChange = (name, value) => {
-    setAd(ad => ({ ...ad, [name]: value }))
+    setAd(prevAd => ({ ...prevAd, [name]: value }))
     // TODO: how can I change the collection simoultaniously?.
+  }
+  //    Photo change and destroy handlers
+  const handlePhotoChange = async file => {
+    setWaitingPhoto(true)
+    try {
+      // Get the signed URL to upload the photo to.
+      const response = await axios.post('/api/adsPhotos', {
+        params: { 'file-name': file.name, 'file-type': file.type }
+      })
+      // Upload the photo to the signed URL.
+      await axios.put(response.data.signedURL, file)
+      // Change the, now hidden, photo field programmatically.
+      setAd(prevAd => ({ ...prevAd, photo: response.data.photo }))
+      setWaitingPhoto(false)
+    } catch (error) {
+      console.log('Fetch of signed request or PUTing the photo failed!', error)
+    }
+  }
+  const handlePhotoDestroy = async key => {
+    setWaitingPhotoDestroy(true)
+    // extract photo key (name) from photo URL and destroy it.
+    try {
+      await axios.delete(`/api/adsPhotos/${key}`)
+      setAd(prevAd => ({ ...prevAd, photo: '/default.png' }))
+      setWaitingPhotoDestroy(false)
+    } catch (error) {
+      // TODO: need to extract to manager parent because snackbar needed.
+      alert(
+        'Destruction of photo unsuccessfull! Go to aws console and delete the photo yourself.'
+      )
+    }
   }
 
   //    Feedback
@@ -261,8 +336,8 @@ const AdManager = () => {
   // Helpers
   const handleGenerate = () => {
     const gender = GENDERS[Math.floor(Math.random() * GENDERS.length)]
-    const bodyPart = BODY_PARTS[Math.round(Math.random() * BODY_PARTS.length)]
-    const type = TYPES[Math.round(Math.random() * TYPES.length)]
+    const bodyPart = BODY_PARTS[Math.floor(Math.random() * BODY_PARTS.length)]
+    const type = TYPES[Math.floor(Math.random() * TYPES.length)]
     const title = ad.title.slice(0, -1) + (+ad.title.slice(-1) + 1)
     const description =
       ad.description.slice(0, -1) + (+ad.description.slice(-1) + 1)
@@ -274,20 +349,40 @@ const AdManager = () => {
     <>
       <Switch>
         <Route exact path="/ads">
-          <AdsTable
-            initialElement={initialAd}
-            rows={ads}
-            onDestroy={handleDestroy}
-          />
+          {waiting ? (
+            <Container sx={{ width: '150px', paddingTop: '100px' }}>
+              <CircularProgress size={100} />
+            </Container>
+          ) : (
+            <AdsTable
+              initialElement={initialAd}
+              rows={ads}
+              onDestroy={handleDestroy}
+              onPhotoDestroy={handlePhotoDestroy}
+              waitingDestroy={waitingDestroy}
+            />
+          )}
         </Route>
         <Route path="/ads/:id">
-          <AdForm
-            name="existing"
-            ad={ad}
-            onSubmit={handleSubmit}
-            onChange={handleChange}
-            onDestroy={handleDestroy}
-          />
+          {waiting ? (
+            <Container sx={{ width: '150px', paddingTop: '100px' }}>
+              <CircularProgress size={100} />
+            </Container>
+          ) : (
+            <AdForm
+              name="existing"
+              ad={ad}
+              onSubmit={handleSubmit}
+              onChange={handleChange}
+              onDestroy={handleDestroy}
+              onPhotoChange={handlePhotoChange}
+              onPhotoDestroy={handlePhotoDestroy}
+              waitingPhoto={waitingPhoto}
+              waitingPhotoDestroy={waitingPhotoDestroy}
+              waitingSubmit={waitingSubmit}
+              waitingDestroy={waitingDestroy}
+            />
+          )}
         </Route>
         <Route path="/adsCarousel">
           <Carousel value={ads} />
@@ -317,6 +412,11 @@ const AdManager = () => {
           ad={ad}
           onSubmit={handleSubmit}
           onChange={handleChange}
+          onPhotoChange={handlePhotoChange}
+          onPhotoDestroy={handlePhotoDestroy}
+          waitingPhoto={waitingPhoto}
+          waitingPhotoDestroy={waitingPhotoDestroy}
+          waitingSubmit={waitingSubmit}
         />
       </Dialog>
       {/* Feedback snackbar */}

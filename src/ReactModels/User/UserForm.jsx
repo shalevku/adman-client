@@ -2,19 +2,20 @@
 // I decided to use the native form and submit button attributes, using a single handleSubmit event handler instead onclick events.
 import React, { useContext, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
-import { Container, Stack, TextField, Button } from '@mui/material'
+import { Box, Container, Stack, TextField, Button } from '@mui/material'
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions
+  DialogActions,
+  CircularProgress
 } from '@mui/material'
 import { authContext } from '../../App'
 
 /**
  * <model>Form component represents a form whos action, method and filtered controls are decided according to the name prop.
- * @param {*} props name, user, onSubmit, onChange, onDestroy.
+ * @param {*} props name, user, onSubmit, onChange, onDestroy, waitingSubmit.
  * @summary
  * name: form to be rendered (with filtered fields and buttons).
  * user: user from parent.
@@ -22,10 +23,11 @@ import { authContext } from '../../App'
  * @returns \<form> of existing or new user.
  */
 const UserForm = props => {
-  const { authUser } = useContext(authContext)
+  //    React router hooks and authentication context value
   const location = useLocation()
   console.log(`${props.name}UserForm at ${location.pathname}.`)
   const params = useParams()
+  const { authUser } = useContext(authContext)
 
   //    Setting the action, method and userMask of the form.
   let [action, method] = ['', '']
@@ -232,16 +234,26 @@ const UserForm = props => {
               Destroy
             </Button>
           )}
-          {userMask.create && (
-            <Button type="submit" variant="contained">
-              Create
-            </Button>
-          )}
-          {userMask.login && (
-            <Button type="submit" variant="contained">
-              login
-            </Button>
-          )}
+          {userMask.create &&
+            (props.waitingSubmit ? (
+              <Box>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Button type="submit" variant="contained">
+                Create
+              </Button>
+            ))}
+          {userMask.login &&
+            (props.waitingSubmit ? (
+              <Box>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Button type="submit" variant="contained">
+                login
+              </Button>
+            ))}
         </Stack>
       </Container>
       <Dialog

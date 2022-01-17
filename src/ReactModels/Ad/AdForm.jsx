@@ -3,13 +3,15 @@
 import React, { useContext, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import {
+  Box,
   Container,
   Stack,
   TextField,
   Button,
   Autocomplete,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  CircularProgress
 } from '@mui/material'
 import AddAPhotoIcon from '@mui/icons-material/AddAPhoto'
 import { authContext } from '../../App'
@@ -70,17 +72,19 @@ const TYPES = [
 
 /**
  * <model>Form component represents a form whos action, method and filtered controls are decided according to the name prop.
- * @param {*} props name, ad, onSubmit, onChange, onDestroy.
+ * @param {*} props name, ad, onSubmit, onChange, onDestroy, waiting, waitingPhoto.
  * @summary
  * name: form to be rendered (rendered with filtered fields and buttons).
  * ad: ad from parent.
- * onChange: sets value for special fields such as checkbox and file and then invokes props.onChange().
+ * onChange: Invoked when one of the form
+ * onPhotoChange:
  * @returns \<form> of existing or new ad.
  */
 const AdForm = props => {
-  const { authUser } = useContext(authContext)
+  //    React router hooks and authentication context value
   console.log(`${props.name}AdForm at ${useLocation().pathname}.`)
   const params = useParams()
+  const { authUser } = useContext(authContext)
 
   //    Setting the action, method and adMask of the form.
   let [action, method] = ['', '']
@@ -111,8 +115,8 @@ const AdForm = props => {
         description: true,
         isGiven: true,
         photo: true,
-        update: true,
-        destroy: true
+        update: authUser ? true : false,
+        destroy: authUser ? true : false
       })
       break
     case 'new':
@@ -124,57 +128,50 @@ const AdForm = props => {
         title: true,
         description: true,
         photo: true,
-        create: true
+        create: authUser ? true : false
       })
       break
     default:
       break
   }
-  // Hiding Actions from a guest.
-  if (!authUser) adMask.update = adMask.destroy = adMask.create = false
 
   //    Default behaviors of the form.
-  const handleTextFieldChange = event => {
-    const target = event.target
-    const name = target.name
-    let value = target.value
-    switch (target.type) {
-      case 'file':
-        value = target.files[0]
-        break
-      case 'checkbox':
-        value = target.checked
-        break
-      default:
-    }
-    props.onChange(name, value)
-  }
   const handleSubmit = event => {
     event.preventDefault()
     const action = new URL(event.target.action).pathname
     props.onSubmit(action, method) // and not event.target.method since only get and post values can be set.
   }
-
-  //    Autocomplete related
+  const handleDestroy = () => {
+    // If the ad has a photo than destroy the photo.
+    if (props.ad.photo !== '/default.png') {
+      const key = new URL(props.ad.photo).pathname
+      props.onPhotoDestroy(key)
+    }
+    // Destroy the ad.
+    props.onDestroy()
+  }
+  const handleTextFieldChange = event => {
+    props.onChange(event.target.name, event.target.value)
+  }
+  const handleCheckboxChange = event => {
+    props.onChange(event.target.name, event.target.checked)
+  }
+  // Autocomplete related:
   // On first render only the input change event fires with null event and empty adAcInputs properties.
   // On autocomplete option check it firstly fires input change event (with click event) and then the autocomplete (listbox click) event, also with click event.
   // Autocomplete Click event - option selected from the listbox.
   const handleAcChange = (event, newValue) => {
-    console.log('in handleAcChange')
-    console.log(event)
     // Extract name of the textbox (via id of the li element).
     const id = event.target.id
     const name = id.substring(0, id.indexOf('-'))
     props.onChange(name, newValue)
   }
-
   // For controlled inputs from the form itself.
   const [adAcInputs, setAdAcInputs] = useState({
     gender: '',
     bodyPart: '',
     type: ''
   })
-
   // TODO: On first render the event is null, so I can't get the form field name (maybe only with anonymous function but then I re-render the field on each update which is counter productive a bit).
   // Change event - gender value typed in the textbox.
   const handleGenderInputChange = (event, newInputValue) => {
@@ -188,31 +185,94 @@ const AdForm = props => {
   const handleTypeInputChange = (event, newInputValue) => {
     setAdAcInputs(adAcInputs => ({ ...adAcInputs, type: newInputValue }))
   }
-
+  //    Photos UD - TODO: think about moving the server communication to the parent manager.
+  // Upload photo to signed URL retrieved from server.
+  function handlePhotoChange(event) {
+    // If the ad has a photo than destroy the photo.
+    if (props.name === 'existing' && props.ad.photo !== '/default.png') {
+      handlePhotoDestroy()
+    }
+    // Upload the new photo
+    const file = event.target.files[0]
+    props.onPhotoChange(file)
+  }
+  function handlePhotoDestroy() {
+    const key = new URL(props.ad.photo).pathname
+    props.onPhotoDestroy(key)
+  }
+  console.log(props.ad.photo);
+  // helper state
   return (
     <>
       <Container
         component="form"
-        sx={{
-          width: '350px',
-          marginTop: '10px'
-        }}
         name={props.name}
         action={action}
         method={method} // browser will swap it with get, but in handleSubmit I will change it back to method.
         onSubmit={handleSubmit}
+        sx={{
+          width: '350px'
+        }}
       >
         <Stack
           direction="column"
           spacing={3}
-          alignItems="flex-start"
-          height="350px"
+          alignItems="center"
           sx={{
-            paddingTop: '10px',
-            overflowY: 'scroll',
             '& .MuiAutocomplete-root': { width: '200px' }
           }}
         >
+          {adMask.photo && (
+            <Box>
+              <Button
+                variant="contained"
+                component="label"
+                startIcon={<AddAPhotoIcon />}
+              >
+                <input type="hidden" name="photo" value={props.ad.photo} />
+                <input
+                  type="file"
+                  id="photo-file"
+                  onChange={handlePhotoChange}
+                  disabled={!authUser}
+                  accept="image/*"
+                  hidden
+                />
+                <Box>
+                  {props.waitingPhoto ? (
+                    <CircularProgress color="secondary" size={100} />
+                  ) : (
+                    <img
+                      id="preview"
+                      src={props.ad.photo}
+                      alt="preview"
+                      style={{
+                        width: '150px',
+                        height: '100px',
+                        objectFit: 'scale-down'
+                      }}
+                    />
+                  )}
+                </Box>
+              </Button>
+              <Box sx={{ width: '150px', margin: 'auto' }}>
+                {props.ad.photo !== '/default.png' &&
+                  (props.waitingPhotoDestroy ? (
+                    <CircularProgress />
+                  ) : (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={handlePhotoDestroy}
+                      sx={{}}
+                    >
+                      Destroy photo
+                    </Button>
+                  ))}
+              </Box>
+            </Box>
+          )}
           {adMask.id && (
             <TextField
               id="id"
@@ -297,53 +357,59 @@ const AdForm = props => {
                 <Checkbox
                   name="isGiven"
                   checked={props.ad.isGiven}
-                  onChange={handleTextFieldChange} // TODO: might not work
+                  onChange={handleCheckboxChange} // TODO: might not work
                   disabled={!authUser}
                 />
               }
               label="Is Given?"
             />
           )}
-          {adMask.photo && (
-            <Button
-              variant="contained"
-              component="label"
-              startIcon={<AddAPhotoIcon />}
-            >
-              Upload a Photo
-              <input
-                id="photo"
-                name="photo"
-                type="file"
-                onChange={handleTextFieldChange}
-                disabled={!authUser}
-                accept="image/*"
-                hidden
-              />
-            </Button>
-          )}
         </Stack>
         <hr />
         <Stack direction="row" justifyContent="space-between">
-          {adMask.update && (
-            <Button type="submit" variant="contained">
-              Update
-            </Button>
-          )}
-          {adMask.destroy && (
-            <Button
-              variant="outlined"
-              color="warning"
-              onClick={() => props.onDestroy()} // anonymous function for to ignore click event.
-            >
-              Destroy
-            </Button>
-          )}
-          {adMask.create && (
-            <Button type="submit" variant="contained">
-              Create
-            </Button>
-          )}
+          {adMask.update &&
+            (props.waitingSubmit ? (
+              <Box>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={props.waitingPhoto || props.waitingPhotoDestroy}
+              >
+                Update
+              </Button>
+            ))}
+          {adMask.destroy &&
+            (props.waitingDestroy ? (
+              <Box>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={handleDestroy}
+                disabled={props.waitingPhoto || props.waitingPhotoDestroy}
+              >
+                Destroy
+              </Button>
+            ))}
+          {adMask.create &&
+            (props.waitingSubmit ? (
+              <Box>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={props.waitingPhoto || props.waitingPhotoDestroy}
+              >
+                Create
+              </Button>
+            ))}
         </Stack>
       </Container>
     </>
